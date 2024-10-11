@@ -1,0 +1,66 @@
+{% extends 'base.html.twig' %}
+{% block body %}
+<h2>{{ 'edit information'|trans }}</h2>
+
+
+{{ form_start(form) }}
+        {{ form_row(form.title) }}
+        {{ form_row(form.text) }}
+<label for="editor">{{ 'Text'|trans }}:</label>
+<div id="editor"></div>
+<div id="file_container">
+    <label for="files_1">{{ form.files.vars.label }}</label>
+    <input type="file"
+           id="files_1"
+           name="{{ form.files.vars.full_name }}[]"
+           accept=".jpg, .jpeg, .png, .gif, .pdf, .txt, .docx"
+           multiple
+           onchange="addFileInput(this)"/>
+    <button onclick="document.getElementById('files_1').value = null">{{ 'reset'|trans }}</button>
+    <small>{{ form.files.vars.help|default('') }}</small>
+</div>
+<div>
+    <button type="submit">Submit</button>
+</div>
+{{ form_end(form, {'render_rest': false}) }}
+
+<div>
+    <script>
+        function addFileInput(inputElement) {
+            // Check if the user selected a file
+            if (inputElement.files.length > 0) {
+
+                let length = document.getElementById("file_container").children.length - 1;
+                let newFileInput = inputElement.cloneNode(true)
+                newFileInput.id = 'files_' + length;
+                newFileInput.type = "file";
+                newFileInput.name = "file[]";
+                newFileInput.value = null;
+                newFileInput.onchange = function () {
+                    addFileInput(this);
+                }; // Add event listener for the new input
+
+                let resetButton =
+                // Append the new input to the form
+                document.getElementById("file_container").appendChild(newFileInput);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+
+            const quill = new Quill('#editor', {
+                theme: 'snow',
+            });
+
+            let jsonContent = document.getElementById("mitarbeiter_info_text").value
+            const delta = JSON.parse(jsonContent)
+            quill.setContents(delta)
+
+            var form = document.querySelector('form');
+            form.onsubmit = function () {
+                deltaObj = quill.getContents();
+                document.getElementById("mitarbeiter_info_text").value = JSON.stringify(deltaObj)
+            };
+        })
+    </script>
+    {% endblock %}

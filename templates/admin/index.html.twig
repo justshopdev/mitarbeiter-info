@@ -1,0 +1,6 @@
+{% extends 'base.html.twig'%}
+{% block body %}
+    <a href="{{ path('edit' ) }}"> <button>{{ 'create new information'|trans }}</button></a>
+    <h2>{{ 'Information History'|trans }}</h2>
+    {% include 'admin/overview.html.twig' %}
+{% endblock %}
