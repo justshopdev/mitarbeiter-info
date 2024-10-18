@@ -1,66 +1,81 @@
 {% extends 'base.html.twig' %}
 {% block body %}
-<h2>{{ 'edit information'|trans }}</h2>
+    <h2>{{ 'edit information'|trans }}</h2>
 
+    {{ form_start(form) }}
+    {{ form_row(form.title) }}
+    {{ form_row(form.text) }}
+    <label for="editor">{{ 'Text'|trans }}:</label>
+    <div id="editor"></div>
+    {% if form.attachments is not null %}
+        <div id="news_attachments_existing">
+            {% for key, attachment in form.attachments %}
+                {{ form_row(attachment.delete) }}
+                {{ attachment.vars.value.lable ?? '' }}
+            {% endfor %}
+        </div>
+    {% endif %}
+    {{ 'additional uploads'|trans }}:
+    <div id="news_attachments_additional">
+    </div>
+    <div>
+        <button type="submit">Submit</button>
+    </div>
 
-{{ form_start(form) }}
-        {{ form_row(form.title) }}
-        {{ form_row(form.text) }}
-<label for="editor">{{ 'Text'|trans }}:</label>
-<div id="editor"></div>
-<div id="file_container">
-    <label for="files_1">{{ form.files.vars.label }}</label>
-    <input type="file"
-           id="files_1"
-           name="{{ form.files.vars.full_name }}[]"
-           accept=".jpg, .jpeg, .png, .gif, .pdf, .txt, .docx"
-           multiple
-           onchange="addFileInput(this)"/>
-    <button onclick="document.getElementById('files_1').value = null">{{ 'reset'|trans }}</button>
-    <small>{{ form.files.vars.help|default('') }}</small>
-</div>
-<div>
-    <button type="submit">Submit</button>
-</div>
-{{ form_end(form, {'render_rest': false}) }}
-
-<div>
     <script>
-        function addFileInput(inputElement) {
-            // Check if the user selected a file
-            if (inputElement.files.length > 0) {
 
-                let length = document.getElementById("file_container").children.length - 1;
-                let newFileInput = inputElement.cloneNode(true)
-                newFileInput.id = 'files_' + length;
-                newFileInput.type = "file";
-                newFileInput.name = "file[]";
-                newFileInput.value = null;
-                newFileInput.onchange = function () {
-                    addFileInput(this);
-                }; // Add event listener for the new input
+        // init counter for unique field ids
+        let existingAttachements = document.querySelectorAll('input[name^="news[attachments]["][name$="delete]"]');
+        let attachmentFieldCounter = existingAttachements.length ?? 0;
 
-                let resetButton =
-                // Append the new input to the form
-                document.getElementById("file_container").appendChild(newFileInput);
-            }
+        /**
+         * create new empty input file after user selected one file
+         */
+        function addFileInput() {
+
+            // cleanup and remove empty (canceled) input fields
+            let newsAttachements = document.querySelectorAll('input[name^="news[attachments]["][name$="]"]')
+            newsAttachements.forEach(currentAttachment => {
+                if (currentAttachment.type == 'file' && currentAttachment.files.length === 0) {
+                    currentAttachment.parentElement.remove();
+                }
+            })
+
+            // create new input field
+            let newFileInput = document.createElement('div')
+            let prototypeString = '{{ form_widget(form.attachments.vars.prototype.file) }}'
+            prototypeString = prototypeString.replaceAll('__name__', attachmentFieldCounter.toString())
+            newFileInput.innerHTML = prototypeString
+            newFileInput.querySelector('input').setAttribute('onchange', 'addFileInput()')
+            newFileInput.value = null;
+            document.getElementById("news_attachments_additional").appendChild(newFileInput);
+
+            // increment counter for unique field ids
+            attachmentFieldCounter++;
         }
 
         document.addEventListener('DOMContentLoaded', function () {
 
+            addFileInput()
+
+            // init quill
             const quill = new Quill('#editor', {
                 theme: 'snow',
             });
 
-            let jsonContent = document.getElementById("mitarbeiter_info_text").value
-            const delta = JSON.parse(jsonContent)
-            quill.setContents(delta)
+            // set existing quill content
+            let jsonContent = document.getElementById("news_text").value
+            if (jsonContent) {
+                const delta = JSON.parse(jsonContent)
+                quill.setContents(delta)
+            }
 
             var form = document.querySelector('form');
             form.onsubmit = function () {
+                // set quill json data to post
                 deltaObj = quill.getContents();
-                document.getElementById("mitarbeiter_info_text").value = JSON.stringify(deltaObj)
+                document.getElementById("news_text").value = JSON.stringify(deltaObj)
             };
         })
     </script>
-    {% endblock %}
+{% endblock %}

@@ -5,17 +5,22 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\News;
-use App\Form\MitarbeiterInfoType;
+use App\Enum\FileTypeEnum;
+use App\Form\NewsType;
 use App\Repository\NewsRepository;
+use App\Service\FileService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 class AdminController extends AbstractController
 {
-    public function __construct(private readonly NewsRepository $newsRepository)
-    {
+    public function __construct(
+        private readonly NewsRepository $newsRepository,
+        private readonly FileService $fileService,
+    ) {
     }
 
     #[Route('/admin')]
@@ -28,20 +33,19 @@ class AdminController extends AbstractController
     public function edit(Request $request, ?int $id): Response
     {
         $news = new News();
-        if ($id !== null) {
-            $news = $this->newsRepository->find($id);
+        if (null !== $id) {
+            $news = $this->newsRepository->find($id) ?: $news;
         }
 
-        $form = $this->createForm(type: MitarbeiterInfoType::class, data: $news);
+        $form = $this->createForm(type: NewsType::class, data: $news);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
-            $news = $form->getData();
+            $this->handleAttachments($form->get('attachments'), $news);
+
             $this->newsRepository->entityManager->persist($news);
             $this->newsRepository->entityManager->flush();
 
-            if ($id === null) {
-                return $this->redirectToRoute('edit', ['id' => $news->id]);
-            }
+            return $this->redirectToRoute('edit', ['id' => $news->id]);
         }
 
         return $this->render(
@@ -51,5 +55,34 @@ class AdminController extends AbstractController
                 'id' => $news->id ?? null,
             ]
         );
+    }
+
+    private function handleAttachments(FormInterface $attachmentForms, News $news): void
+    {
+        foreach ($attachmentForms as $attachmentForm) {
+            $currentAttachment = $attachmentForm->getData();
+            $delete = $attachmentForm->get('delete')->getData();
+            if ($delete) {
+                $news->attachments->removeElement($currentAttachment);
+                $this->newsRepository->entityManager->remove($currentAttachment);
+            }
+
+            $uploadedFile = $attachmentForm->get('file')->getData();
+
+            // is new upload
+            if ($uploadedFile) {
+                $result = $this->fileService->upload($uploadedFile, $news->title);
+
+                $currentAttachment->type = FileTypeEnum::ATTACHMENT;
+                $currentAttachment->lable = $result->lable;
+                $currentAttachment->filename = $result->filename;
+                $currentAttachment->dirname = $result->dirname;
+                $currentAttachment->filetype = $result->filetype;
+                $currentAttachment->filesize = $result->size;
+                $currentAttachment->news = $news;
+                $news->attachments->add($currentAttachment);
+                $this->newsRepository->entityManager->persist($currentAttachment);
+            }
+        }
     }
 }

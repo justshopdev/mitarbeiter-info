@@ -10,10 +10,9 @@ use Doctrine\Persistence\ManagerRegistry;
 class NewsRepository extends ServiceEntityRepository
 {
     public function __construct(
-        ManagerRegistry                        $registry,
+        ManagerRegistry $registry,
         public readonly EntityManagerInterface $entityManager,
-    )
-    {
+    ) {
         parent::__construct($registry, News::class);
     }
 }

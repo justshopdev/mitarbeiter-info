@@ -19,7 +19,7 @@ final class Version20241007093837 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-                $sql = <<<SQL
+        $sql = <<<SQL
                  CREATE TABLE news (
                      id          SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
                      created     DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -37,8 +37,11 @@ SQL;
                      updated     DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
                      news_id     SMALLINT UNSIGNED NOT NULL,
                      lable       VARCHAR(64) NOT NULL,
-                     filename    VARCHAR(64) NOT NULL,
-                     filepath    VARCHAR(255) NOT NULL,
+                     type        VARCHAR(24) NOT NULL,
+                     dirname     VARCHAR(255) NOT NULL,
+                     filename    VARCHAR(255) NOT NULL,
+                     filetype    VARCHAR(24) NOT NULL,
+                     filesize    INTEGER UNSIGNED NOT NULL,
                      PRIMARY KEY (id),
                      FOREIGN KEY (news_id) REFERENCES news(id)
                     ) COMMENT 'news attachment files'
@@ -60,12 +63,9 @@ SQL;
         $this->addSql($sql);
         $this->addSql($sql2);
         $this->addSql($sql3);
-
     }
 
     public function down(Schema $schema): void
     {
-
-
     }
 }
